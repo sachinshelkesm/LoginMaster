@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LoginFormData } from '../types';
 import usersData from "../Data/users.json";
@@ -9,7 +9,19 @@ const Login: React.FC = () => {
     password: '',
   });
   const [error, setError] = useState('');
+  const [users, setUsers] = useState<typeof usersData.users>([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if we have users data in localStorage
+    const savedUsersData = localStorage.getItem('usersData');
+    if (savedUsersData) {
+      setUsers(JSON.parse(savedUsersData).users);
+    } else {
+      // Use the default users data if nothing is in localStorage
+      setUsers(usersData.users);
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -21,7 +33,7 @@ const Login: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const user = usersData.users.find(
+    const user = users.find(
       u => u.username === formData.username && u.password === formData.password
     );
 
