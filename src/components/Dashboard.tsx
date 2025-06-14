@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ResetPasswordFormData, User } from '../types';
+import { ResetPasswordFormData, User, UsersData } from '../types';
+import usersData from '../Data/users.json';
 
 const Dashboard: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -26,8 +27,46 @@ const Dashboard: React.FC = () => {
     navigate('/');
   };
 
+  const updateUsersData = (updatedUser: User) => {
+    // Update the users array with the new password
+    const updatedUsers = (usersData as unknown as UsersData).users.map(user => 
+      user.id === updatedUser.id ? { ...user, password: updatedUser.password } : user
+    );
+    
+    // In a real app, you would make an API call here to update the user's password on the server
+    // For this demo, we'll just update the local storage
+    localStorage.setItem('usersData', JSON.stringify({ users: updatedUsers }));
+    
+    return updatedUsers;
+  };
+
+  const validatePassword = (password: string): { isValid: boolean; message: string } => {
+    // At least one lowercase letter, one uppercase letter, one digit, one special character, no spaces, and at least 8 characters
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d\s]).{8,}$/;
+    
+    if (password.length < 8) {
+      return { isValid: false, message: 'Password must be at least 8 characters long' };
+    }
+    if (!/[a-z]/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one lowercase letter' };
+    }
+    if (!/[A-Z]/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one uppercase letter' };
+    }
+    if (!/\d/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one digit' };
+    }
+    if (!/[^a-zA-Z\d\s]/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one special character' };
+    }
+    if (/\s/.test(password)) {
+      return { isValid: false, message: 'Password cannot contain spaces' };
+    }
+    
+    return { isValid: true, message: 'Password is valid' };
+  };
+
   const handleResetPassword = (e: React.FormEvent) => {
-    console.log("Handle reset password")
     e.preventDefault();
     
     if (resetForm.newPassword !== resetForm.confirmPassword) {
@@ -35,14 +74,20 @@ const Dashboard: React.FC = () => {
       return;
     }
 
-    if (resetForm.newPassword.length < 6) {
-      setMessage({ text: 'Password must be at least 6 characters long', type: 'error' });
+    const passwordValidation = validatePassword(resetForm.newPassword);
+    if (!passwordValidation.isValid) {
+      setMessage({ text: passwordValidation.message, type: 'error' });
       return;
     }
 
-    // In a real app, you would make an API call to update the password
-    const updatedUser = { ...currentUser, password: resetForm.newPassword } as User;
+    if (!currentUser) return;
+
+    // Update the user's password
+    const updatedUser = { ...currentUser, password: resetForm.newPassword };
+    
+    // Update both localStorage and our users data
     localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    updateUsersData(updatedUser);
     setCurrentUser(updatedUser);
     
     setMessage({ text: 'Password updated successfully!', type: 'success' });
@@ -98,7 +143,7 @@ const Dashboard: React.FC = () => {
                 value={resetForm.newPassword}
                 onChange={handleResetChange}
                 required
-                minLength={6}
+                minLength={8}
                 style={styles.input}
               />
             </div>
@@ -111,7 +156,7 @@ const Dashboard: React.FC = () => {
                 value={resetForm.confirmPassword}
                 onChange={handleResetChange}
                 required
-                minLength={6}
+                minLength={8}
                 style={styles.input}
               />
             </div>
